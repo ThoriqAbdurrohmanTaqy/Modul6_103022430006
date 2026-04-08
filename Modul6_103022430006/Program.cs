@@ -1,41 +1,67 @@
-﻿using System;
-using System.Security.Cryptography.X509Certificates;
+﻿//Pada class yang telah dibuat sebelumnya, tambahkan implementasi design by contract
+//dengan ketentuan sebagai berikut:
+//1.Precondition sebagai berikut ini:
+//a.Judul track memiliki panjang maksimal 200 karakter.
+//b. Judul track tidak berupa null.
+//c. Input penambahan play count maksimal 25.000.000 untuk setiap pemanggilan 
+//method IncreasePlayCount().
+//d. Input play count tidak berupa bilangan negative.
+//e. Nama username memiliki panjang maksimal 100 karakter.
+//f. Nama username tidak berupa null.Track yang ditambahkan melalui method 
+//AddTrack() tidak berupa null.
+//LABORATORIUM PRAKTIKUM INFORMATIKA
+//Fakultas Informatika
+//Universitas Telkom
+//g. Track yang ditambahkan memiliki nilai playCount kurang dari batas maksimum 
+//bilangan integer (int.MaxValue).
+//using System;
+//using System.Security.Cryptography.X509Certificates;
+
+using System.Net;
 
 namespace Modul6_103022430006
 {
     class SayaMusicUser
     {
-        private int id;
+        public int Id { get; set; }
         public string Username { get; set; }
-        private List<SayaMusicTrack> uploadedTracks;
+        private List<SayaMusicTrack> tracks;
         public SayaMusicUser(string username)
         {
-            this.id = new Random().Next(10000, 99999);
-            this.Username = username;
-            this.uploadedTracks = new List<SayaMusicTrack>();
-        }
-        public int GetTotalPlayCount()
-        {
-            int totalPlayCount = 0;
-            foreach (var track in uploadedTracks)
+            if (string.IsNullOrEmpty(username) || username.Length > 100)
             {
-                totalPlayCount += track.PlayCount;
+                throw new ArgumentException("Username must be non-null and have a maximum length of 100 characters.");
             }
-            return totalPlayCount;
+            this.Id = new Random().Next(10000, 99999);
+            this.Username = username;
+            this.tracks = new List<SayaMusicTrack>();
         }
         public void AddTrack(SayaMusicTrack track)
         {
-            uploadedTracks.Add(track);
+            if (track == null)
+            {
+                throw new ArgumentException("Track cannot be null.");
+            }
+            if (track.PlayCount >= int.MaxValue)
+            {
+                throw new ArgumentException("Track play count must be less than the maximum integer value.");
+            }
+            tracks.Add(track);
         }
         public void PrintAllTracks()
         {
-            Console.WriteLine($"User: {Username}");
-            for (int i = 0; i < uploadedTracks.Count; i++)
+            int maxprint = tracks.Count > 8 ? 8 : tracks.Count;
+            Console.WriteLine($"User: {Username} (ID: {Id})");
+            foreach (var track in tracks.Take(maxprint))
             {
-                Console.WriteLine($"Track {i + 1} judul: {uploadedTracks[i].Title}");
+                track.PrintTrackDetails();
             }
+
+        
         }
     }
+    
+    
 
     class SayaMusicTrack
     {
@@ -47,10 +73,37 @@ namespace Modul6_103022430006
             this.id = new Random().Next(10000, 99999);
             this.Title = title;
             this.PlayCount = 0;
+            if (title == null || title.Length > 200)
+            {
+                throw new ArgumentException("Track title must be non-null and have a maximum length of 200 characters.");
+            }
         }
+
         public void IncreasePlayCount(int count)
         {
             PlayCount += count;
+            if (count > 25000000)
+            {
+                throw new ArgumentException("Play count increase must not exceed 25,000,000.");
+            }
+
+            if (count < 0)
+            {
+                throw new ArgumentException("Play count must not be negative.");
+            }
+            try
+            {
+                checked
+                {
+                    PlayCount += count;
+                }
+
+            }
+            catch (OverflowException)
+            {
+                throw new ArgumentException("Play count increase would cause an overflow.");
+            }
+
         }
         public void PrintTrackDetails()
         {
@@ -62,6 +115,8 @@ namespace Modul6_103022430006
     {
         static void Main(string[] args)
         {
+            try
+            {
                 SayaMusicUser user1 = new SayaMusicUser("Thoriq Abdurrohman Taqy");
                 SayaMusicTrack track1 = new SayaMusicTrack("Genjer-genjer");
                 SayaMusicTrack track2 = new SayaMusicTrack("kunfu panda");
@@ -70,9 +125,23 @@ namespace Modul6_103022430006
                 track1.IncreasePlayCount(150);
                 track2.IncreasePlayCount(200);
                 user1.PrintAllTracks();
-                Console.WriteLine($"Total Play Count for {user1.Username}: {user1.GetTotalPlayCount()}");
+                SayaMusicTrack overflowtest = new SayaMusicTrack("Overflow Test");
+                Console.WriteLine($"Total Play Count for '{overflowtest.Title}' before overflow test: {overflowtest.PlayCount}");
+                Console.Write(overflowtest.ToString());
+                Console.WriteLine();
 
+                for (int i = 0; i < 100; i++)
+                {
+                    overflowtest.IncreasePlayCount(int.MaxValue);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
 
+            Console.WriteLine("Press any key to exit...");
+            Console.ReadKey();
 
         }
 
